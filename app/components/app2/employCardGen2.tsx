@@ -1,16 +1,27 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, ChangeEvent } from 'react';
 import { Upload, Download, Users, Settings, Eye } from 'lucide-react';
+
+interface Employee {
+  name: string;
+  department: string;
+  idNumber: string;
+  email: string;
+  phone: string;
+  companyName: string;
+  photo: string | null;
+  generatedAt: string;
+}
 
 const EmployeeIDGenerator = () => {
   const [activeTab, setActiveTab] = useState('form');
-  const [companyLogo, setCompanyLogo] = useState(null);
-  const [employeePhoto, setEmployeePhoto] = useState(null);
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [employeePhoto, setEmployeePhoto] = useState<string | null>(null);
   const [generatedCard, setGeneratedCard] = useState(false);
-  const [employees, setEmployees] = useState([]);
-  const [frontCardImage, setFrontCardImage] = useState(null);
-  const [backCardImage, setBackCardImage] = useState(null);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [frontCardImage, setFrontCardImage] = useState<string | null>(null);
+  const [backCardImage, setBackCardImage] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -24,22 +35,23 @@ const EmployeeIDGenerator = () => {
   const frontCanvasRef = useRef(null);
   const backCanvasRef = useRef(null);
 
-  const handleImageUpload = (e, type) => {
-    const file = e.target.files[0];
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>, type: 'logo' | 'photo') => {
+    const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
+        const result = event.target?.result as string;
         if (type === 'logo') {
-          setCompanyLogo(event.target.result);
+          setCompanyLogo(result);
         } else {
-          setEmployeePhoto(event.target.result);
+          setEmployeePhoto(result);
         }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -77,10 +89,10 @@ const EmployeeIDGenerator = () => {
     const frontImage = await generateFrontCard();
     const backImage = await generateBackCard();
     
-    setFrontCardImage(frontImage);
-    setBackCardImage(backImage);
+    setFrontCardImage(frontImage as string);
+    setBackCardImage(backImage as string);
     
-    const newEmployee = {
+    const newEmployee: Employee = {
       ...formData,
       photo: employeePhoto,
       generatedAt: new Date().toISOString()
@@ -91,10 +103,11 @@ const EmployeeIDGenerator = () => {
     setActiveTab('preview');
   };
 
-  const generateFrontCard = () => {
+  const generateFrontCard = (): Promise<string> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
+      if (!ctx) return;
       
       canvas.width = 600;
       canvas.height = 950;
@@ -132,6 +145,7 @@ const EmployeeIDGenerator = () => {
 
       // Function to continue after logo
       const continueDrawing = () => {
+        if (!ctx) return;
         // Company name
         ctx.fillStyle = '#2C3E50';
         ctx.font = 'bold 30px Arial';
@@ -158,6 +172,7 @@ const EmployeeIDGenerator = () => {
         const photoImg = new Image();
         photoImg.crossOrigin = 'anonymous';
         photoImg.onload = () => {
+          if (!ctx) return;
           // Draw photo in circle
           ctx.save();
           ctx.beginPath();
@@ -199,7 +214,7 @@ const EmployeeIDGenerator = () => {
           console.error('Failed to load employee photo');
           resolve(canvas.toDataURL('image/png'));
         };
-        photoImg.src = employeePhoto;
+        if (employeePhoto) photoImg.src = employeePhoto;
       };
 
       // Load and draw company logo
@@ -207,6 +222,7 @@ const EmployeeIDGenerator = () => {
         const logoImg = new Image();
         logoImg.crossOrigin = 'anonymous';
         logoImg.onload = () => {
+          if (!ctx) return;
           ctx.save();
           ctx.beginPath();
           ctx.arc(300, 110, 45, 0, Math.PI * 2);
@@ -222,6 +238,7 @@ const EmployeeIDGenerator = () => {
         };
         logoImg.src = companyLogo;
       } else {
+        if (!ctx) return;
         // Draw default logo
         ctx.fillStyle = '#2C3E50';
         ctx.beginPath();
@@ -242,10 +259,11 @@ const EmployeeIDGenerator = () => {
     });
   };
 
-  const generateBackCard = () => {
+  const generateBackCard = (): Promise<string> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
+      if (!ctx) return;
       
       canvas.width = 600;
       canvas.height = 950;
@@ -315,6 +333,7 @@ const EmployeeIDGenerator = () => {
 
       // Function to draw company name
       const drawCompanyName = () => {
+        if (!ctx) return;
         ctx.fillStyle = '#2C3E50';
         ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'left';
@@ -334,6 +353,7 @@ const EmployeeIDGenerator = () => {
         const logoImg = new Image();
         logoImg.crossOrigin = 'anonymous';
         logoImg.onload = () => {
+          if (!ctx) return;
           ctx.save();
           ctx.beginPath();
           ctx.arc(110, 800, 30, 0, Math.PI * 2);
@@ -349,6 +369,7 @@ const EmployeeIDGenerator = () => {
         };
         logoImg.src = companyLogo;
       } else {
+        if (!ctx) return;
         // Draw default logo
         ctx.fillStyle = '#2C3E50';
         ctx.beginPath();
@@ -369,7 +390,7 @@ const EmployeeIDGenerator = () => {
     });
   };
 
-  const wrapText = (ctx, text, x, y, maxWidth, lineHeight) => {
+  const wrapText = (ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
     const words = text.split(' ');
     let line = '';
     let currentY = y;
@@ -390,7 +411,7 @@ const EmployeeIDGenerator = () => {
     ctx.fillText(line, x, currentY);
   };
 
-  const drawBarcode = (ctx, x, y, width, height) => {
+  const drawBarcode = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) => {
     const bars = 50;
     const barWidth = width / bars;
     
@@ -402,7 +423,7 @@ const EmployeeIDGenerator = () => {
     }
   };
 
-  const downloadCard = (type) => {
+  const downloadCard = (type: 'front' | 'back') => {
     const imageData = type === 'front' ? frontCardImage : backCardImage;
     if (!imageData) return;
     
@@ -712,7 +733,7 @@ const EmployeeIDGenerator = () => {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {employees.map((emp, idx) => (
                   <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition">
-                    <img src={emp.photo} alt={emp.name} className="w-24 h-24 rounded-full mx-auto mb-3 object-cover border-2 border-purple-200" />
+                    <img src={emp.photo ?? ''} alt={emp.name} className="w-24 h-24 rounded-full mx-auto mb-3 object-cover border-2 border-purple-200" />
                     <h3 className="font-bold text-center text-lg">{emp.name}</h3>
                     <p className="text-center text-gray-600 text-sm">{emp.department}</p>
                     <p className="text-center text-gray-500 text-sm mt-1">ID: {emp.idNumber}</p>
