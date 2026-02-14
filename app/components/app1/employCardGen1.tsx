@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, ChangeEvent } from 'react';
 import { Download, RotateCcw, User } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 // Renamed to avoid conflict with built-in FormData type
 type EmployeeData = {
@@ -30,6 +32,7 @@ export default function EmployeeCardGenerator1() {
   const [showCard, setShowCard] = useState<boolean>(false);
   const [showBack, setShowBack] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
@@ -75,9 +78,37 @@ export default function EmployeeCardGenerator1() {
     }
   };
 
-  const handleDownload = (): void => {
-    const side = showBack ? 'Back' : 'Front';
-    alert(`To download the ${side} side:\n\n1. Right-click on the card\n2. Select "Save image as..." or take a screenshot\n3. Or press Ctrl+Shift+S (Windows) or Cmd+Shift+4 (Mac)\n\nTip: Download both Front and Back sides separately!`);
+  const handleDownload = async (): Promise<void> => {
+    if (!cardRef.current) {
+      alert('Card not rendered yet. Please generate the card first.');
+      return;
+    }
+
+    const input = cardRef.current;
+    
+    // Temporarily adjust styles for better capture if needed, then revert
+    // For this specific card, ensuring it fits well within standard PDF sizes might require scaling or specific rendering options.
+    // Let's try capturing directly first.
+
+    try {
+      const canvas = await html2canvas(input, {
+        scale: 2, // Increase scale for better resolution
+        useCORS: true, // Important for images loaded from different origins (like user-uploaded photos)
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px', // Use pixels
+        format: [canvas.width, canvas.height] // Set PDF size to canvas size
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      const side = showBack ? 'Back' : 'Front';
+      pdf.save(`Employee_Card_${formData.name.replace(/\s/g, '_')}_${side}.pdf`);
+      alert(`PDF downloaded to your default downloads folder!`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to download PDF. Please try again.");
+    }
   };
 
   return (
@@ -246,7 +277,7 @@ export default function EmployeeCardGenerator1() {
                   </button>
                 </div>
 
-                <div id="employee-card" className="relative mx-auto" style={{ width: '340px', height: '540px' }}>
+                <div id="employee-card" ref={cardRef} className="relative mx-auto" style={{ width: '340px', height: '540px' }}>
                   {!showBack ? (
                     <div className="w-full h-full bg-white rounded-2xl shadow-2xl overflow-hidden relative">
                       <div className="relative h-48" style={{background: 'linear-gradient(135deg, #86efac 0%, #4ade80 50%, #22c55e 100%)'}}>
@@ -381,7 +412,7 @@ export default function EmployeeCardGenerator1() {
                 </button>
                 
                 <div className="text-center text-sm text-gray-600 mt-2">
-                  <p>💡 Tip: Download both front and back sides separately</p>
+                  <p>💡 Tip: PDF will be downloaded to your default downloads folder.</p>
                 </div>
               </div>
             ) : (
